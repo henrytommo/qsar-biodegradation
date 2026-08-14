@@ -28,3 +28,19 @@ currently:
 │ Logistic       │ 0.785  │ 0.946     │ C=10, l1_ratio=0.5 (elastic-net), scaling=normalize, class_weight="balanced" (chosen via     │
 │ Regression     │        │           │ random search, 5-fold CV F1 0.800 ± 0.027)                                                   |
 └────────────────┴────────┴───────────┴──────────────────────────────────────────────────────────────────────────────────────────────┘
+
+## GCN
+- So far, we have used the qsar features. Now to try using the actual molecular structures - using SMILES representation (from Kamel Mansouri, Tine Ringsted, Davide Ballabio, Roberto Todeschini, Viviana Consonni; Quantitative Structure–Activity Relationship Models for Ready Biodegradability of Chemicals. J. Chem. Inf. Model. 22 April 2013; 53 (4): 867–878. https://doi.org/10.1021/ci4000213)
+- use molecular structure PLUS qsar feats as global features
+
+┌─────────┬───────────────┬───────────────┐
+│         │  CV (5-fold)  │ Held-out test │
+├─────────┼───────────────┼───────────────┤
+│ F1      │ 0.809 ± 0.039 │ 0.797         │
+├─────────┼───────────────┼───────────────┤
+│ ROC-AUC │ 0.931 ± 0.019 │ 0.944         │
+├─────────┼───────────────┼───────────────┤
+│ PR-AUC  │ 0.874 ± 0.045 │ 0.914         │
+└─────────┴───────────────┴───────────────┘
+
+- pretty similar to the xgb and lr experiments - so likely we need to go back to the features to see if there are any improvements to make there.

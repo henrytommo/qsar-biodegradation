@@ -7,10 +7,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from de import logreg_experiment as lrx
-from de import xgb_experiment as xgbx
 from de.cv import holdout_split
 from de.data import BINARY_FEATS, load_data
+from exp import logreg_experiment as lrx
+from exp import xgb_experiment as xgbx
 from utils.logger import Logger
 
 OUT_DIR = Path(__file__).resolve().parents[1] / "outputs" / "feature_analysis"
