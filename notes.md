@@ -72,5 +72,33 @@ generate report for rare/low importance features
 getting an experiment process i was happy with has taken a few iterations (and there will probs be more as i go through), but this is a good place to start. next some more features.
 
 
+## aside - adding more partitions
+in tune, update so we take a 5 fold partition over three random seeds (rather than 5 over 1), so we get a better representation.
+
+
+## rdkit features
+there are loads of rdkit descriptors that can be added. will start with:
+- octanol-water partition coef (Crippen.MolLogP): high val means hydrophobic, may affect biodegradation.
+- molecular weight (Descriptors.MolWt): a larger molecule will be slower to cross bacterial membranes. however we have a few feats already that denote number of atoms and mass weighted/size correlated counts. so molecular weight will likely have some collinearity with these.
+- topological polar surface area (Descriptors.TPSA): indication of hydrogen bonding ability - affects bioavailability. again, we have nHDon (h bond donors) as a feat already, so will see some multicollinearity.
+
+checked overlap first: none of the three are directly present (no lipophilicity descriptor at all - MolWt/TPSA have related-but-distinct feats as expected). added all three -> 45 feats total. cheap 2D descriptors so no cache (unlike the xTB gap). MolLogP ranks high in the tree ranking (used by xgb + gcn) but logreg doesn't pick it up (a linear model gets less from logP); TPSA selected by all three; MolWt selected by logreg + gcn (ranks lower, the flagged collinearity).
+
+logreg improved a touch (it's the model that took MolWt+TPSA), xgb/gcn flat within noise. not a breakthrough.
+
+
+## repeated CV outcome (3x partitions)
+implemented as `tune --repeats N` (default 3): pool N 5-fold partitions per config instead of 1, so the winner is robust to fold assignment (3x cost). result: xgb + logreg configs unchanged (their single-split winners were already robust), gcn moved to a gentler config (h64/lr1e-3 vs h128/lr1e-2). old gcn config claimed test f1 0.816 at tune time but delivered 0.783 across seeds (0.033 mirage); new one claims 0.795, delivers 0.794. gap basically gone. tune numbers now mean something.
+
+final 10-seed comparison at the 45-feat, 3x-repeated-CV configs:
+
+| Model | Config | F1 | Precision | Recall | ROC-AUC | PR-AUC |
+| --- | --- | --- | --- | --- | --- | --- |
+| xgb | 45 feats | 0.766 ± 0.024 | 0.716 ± 0.034 | 0.825 ± 0.041 | 0.916 ± 0.019 | 0.872 ± 0.027 |
+| logreg | 30 feats | 0.804 ± 0.026 | 0.741 ± 0.037 | 0.882 ± 0.036 | 0.923 ± 0.019 | 0.864 ± 0.039 |
+| gcn | 45 feats | 0.794 ± 0.029 | 0.742 ± 0.054 | 0.858 ± 0.031 | 0.925 ± 0.015 | 0.870 ± 0.030 |
+
+still tied within noise on every column. logreg best recall (0.882), gcn best precision/ROC-AUC/PR-AUC (better-calibrated ranking, more conservative), xgb trails.
+
 
 

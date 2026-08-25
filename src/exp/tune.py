@@ -27,7 +27,7 @@ def _report(best, metrics):
     print(f"\nFinal test metrics: {({k: round(v, 3) for k, v in metrics.items()})}")
 
 
-def tune(spec, dataset, n_iter=25, n_splits=5, select=False, ranker=None, ranker_params=None):
+def tune(spec, dataset, n_iter=25, n_splits=5, n_repeats=3, select=False, ranker=None, ranker_params=None):
     """Random search over params (+ scaling, + feature count when select), then a final fit.
     Returns (best, metrics, model, features); features is the top-N list, or None."""
     train, test = dataset.holdout()
@@ -37,7 +37,7 @@ def tune(spec, dataset, n_iter=25, n_splits=5, select=False, ranker=None, ranker
         total = len(dataset.feature_names)
         space["n_features"] = [n for n in spec.feature_counts if n < total] + [total]
 
-    scorer = cv_score(spec, train, n_splits=n_splits, select=select, ranker=ranker, ranker_params=ranker_params)
+    scorer = cv_score(spec, train, n_splits=n_splits, n_repeats=n_repeats, select=select, ranker=ranker, ranker_params=ranker_params)
     best = random_search(scorer, space, n_iter=n_iter, methods=spec.scaling_methods)[0]
 
     features = None
@@ -61,6 +61,7 @@ if __name__ == "__main__":
     p.add_argument("--select", action="store_true", help="jointly search the feature count (top-N)")
     p.add_argument("--write", action="store_true", help="write the result to config/best_params.yml")
     p.add_argument("--n-iter", type=int, default=25, help="random-search iterations")
+    p.add_argument("--repeats", type=int, default=3, help="CV partitions pooled per config (robustness vs. time)")
     args = p.parse_args()
 
     spec = MODELS[args.model]
@@ -70,11 +71,11 @@ if __name__ == "__main__":
         ranker, ranker_params = MODELS["xgb"], config.load("xgb")[0]
 
     dataset = Dataset.load(graph=spec.graph)
-    print(f"Tuning {args.model}: {len(dataset.data)} samples, {len(dataset.feature_names)} features"
-          + (" (+ joint feature selection)" if args.select else ""))
+    print(f"Tuning {args.model}: {len(dataset.data)} samples, {len(dataset.feature_names)} features, "
+          f"{args.repeats}x{5}-fold CV" + (" (+ joint feature selection)" if args.select else ""))
 
-    best, metrics, _, features = tune(spec, dataset, n_iter=args.n_iter, select=args.select,
-                                      ranker=ranker, ranker_params=ranker_params)
+    best, metrics, _, features = tune(spec, dataset, n_iter=args.n_iter, n_repeats=args.repeats,
+                                      select=args.select, ranker=ranker, ranker_params=ranker_params)
 
     entry = config.build_entry(args.model, best, features, metrics)
     print("\n# --- paste into config/best_params.yml ---")
