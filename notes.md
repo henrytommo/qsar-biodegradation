@@ -123,7 +123,7 @@ ran all 3 models over 10 seeds where every seed shares ONE stratified test split
 
 errors are only partly shared. of 469 misclassified (mol, seed) instances: 43% wrong by all 3, 23% by 2, but 34% wrong by just ONE model. pairwise error corr (phi): xgb-logreg 0.61, xgb-gcn 0.65, logreg-gcn 0.77. so logreg and gcn make more of the same mistakes.
 
-hard core: 97 molecules (9.2%) wrong by all 3 in >=50% of their appearances. label mix RB 34 / NRB 63 = 35% RB, same as the dataset - not a one-class problem.
+hard core: 97 molecules (9.2%) wrong by all 3 in >=50% of their appearances. label mix RB 34 / NRB 63 = 35% RB, same as the dataset - not one-class problem.
 
 
 ## ensembling
@@ -137,7 +137,25 @@ soft-vote (average the probas). beats every single model on every metric, matche
 | xgb+logreg | 0.797 ± 0.028 | 0.759 | 0.841 | 0.928 | 0.887 |
 | all three | 0.799 ± 0.012 | 0.748 | 0.858 | 0.929 | 0.888 |
 
-gcn is droppable: xgb+logreg - all three = -0.001 ± 0.019 f1 (tied 5/10 seeds), and the 2-way has the best precision of anything tested (0.759). gcn adds ~nothing to the mean - the only thing the 3-way buys is less seed-to-seed variance (std 0.012 vs 0.028).
+gcn is droppable: xgb+logreg - all three = -0.001 ± 0.019 f1 (tied 5/10 seeds), and the 2-way has the best precision of anything tested (0.759). gcn adds ~nothing to the mean.
+BUT the only thing the 3 model ensemble does is less seed-to-seed variance (std 0.012 vs 0.028) - might generalise better.
+
+
+## inference + external validation
+built two inference pipelines in src/inference: `ensemble` (xgb+logreg soft-vote) and `gcn`. fit-on-startup (no saved model files) - each fits once on the full training set at its config via a new `exp.fit_final` (the exact fit the reported metrics came from, factored out of evaluate_final), then scores new molecules by `Dataset.from_csv(...).subset(feats).transform(scaler)`. public api: `predict(csv, pipeline=...)` (row-aligned, abstains where xtb featurisation fails); `python -m inference.validate` runs the external set.
+
+inference input is a csv in the smiles_data format (smiles + the 41 qsar cols + optional label), not a bare smiles. external-validation set (670 molecules, 191 RB / 28.5%).
+
+external validation (670 molecules, 0 abstained - external set computed no errors):
+
+| Pipeline | F1 | Precision | Recall | ROC-AUC | PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| ensemble (xgb+logreg) | 0.769 | 0.763 | 0.775 | 0.921 | 0.814 |
+| gcn | 0.785 | 0.796 | 0.775 | 0.926 | 0.825 |
+
+both generalise - external f1 ~0.77-0.79 and roc-auc ~0.92 basically match internal 10-seed cv, so no overfitting, models hold up on new molecs. lower pr-auc (~0.82) is just the lower RB prevalence out here (28.5% vs 34% in train).
+
+on the external set gcn slightly beats the ensemble on EVERY metric (f1 0.785 vs 0.769, precision 0.796 vs 0.763). small gap, but the looks like gcn generalises a bit better to new chemistry than internal cv suggested (probs learning something from the 3d structure graphs)
 
 
 
