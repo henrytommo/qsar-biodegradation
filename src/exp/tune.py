@@ -20,6 +20,9 @@ from exp import config
 from exp.spec import cv_score, evaluate_final, rank_features
 from utils.search import random_search
 
+# cap N features in the feature importance list
+CAP_FEATURES = 20
+
 
 def _report(best, metrics):
     for m in ("f1", "precision", "recall", "roc_auc", "pr_auc"):
@@ -35,7 +38,10 @@ def tune(spec, dataset, n_iter=25, n_splits=5, n_repeats=3, select=False, ranker
     space = dict(spec.param_distributions)
     if select:
         total = len(dataset.feature_names)
-        space["n_features"] = [n for n in spec.feature_counts if n < total] + [total]
+        if CAP_FEATURES:
+            space["n_features"] = [min(CAP_FEATURES, total)]   # pinned cap -- no count search
+        else:
+            space["n_features"] = [n for n in spec.feature_counts if n < total] + [total]
 
     scorer = cv_score(spec, train, n_splits=n_splits, n_repeats=n_repeats, select=select, ranker=ranker, ranker_params=ranker_params)
     best = random_search(scorer, space, n_iter=n_iter, methods=spec.scaling_methods)[0]
