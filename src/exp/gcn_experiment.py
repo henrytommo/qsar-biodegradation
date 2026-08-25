@@ -1,6 +1,6 @@
-"""GCN experiment: random hyperparameter search over CV folds, then a final fit/eval
-on the held-out test set. Node features come from RDKit-parsed SMILES graphs; the
-tabular QSAR descriptors are concatenated in as global features after graph pooling.
+"""
+gcn setup. node features come from RDKit-parsed SMILES graphs
+plus tabular QSAR descriptors (incl. the HOMO-LUMO gap)
 """
 import torch
 import torch.nn.functional as F
@@ -8,9 +8,7 @@ from torch import nn
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, global_mean_pool
 
-from de import gcn_preprocessing as gcnp
-from utils.metrics import aggregate_metrics, classification_metrics
-from utils.search import random_search
+from exp.spec import ModelSpec
 
 PARAM_DISTRIBUTIONS = {
     "hidden_dim": [32, 64, 128],
@@ -107,64 +105,31 @@ def fit(model, train_graphs, val_graphs, params, max_epochs=MAX_EPOCHS, patience
 
 
 @torch.no_grad()
-def evaluate(model, graphs, batch_size=64):
+def predict_raw(model, graphs, batch_size=64):
+    """(y_true, preds, proba) on graphs -- the generic driver turns these into metrics."""
     loader = DataLoader(graphs, batch_size=batch_size, shuffle=False)
     model.eval()
     _, logits, y = _run_epoch(model, loader, pos_weight=torch.tensor(1.0))
     proba = torch.sigmoid(logits).numpy()
     preds = (proba >= 0.5).astype(int)
-    return classification_metrics(y.numpy(), preds, proba)
+    return y.numpy(), preds, proba
 
 
-def _score_params(params, method, random_state, graphs, node_feat_dim, global_feat_dim, n_splits=5):
-    fold_metrics = []
-    for train_graphs, val_graphs in gcnp.cv_folds(graphs, method=method, n_splits=n_splits, random_state=random_state):
-        model = _make_model(params, node_feat_dim, global_feat_dim, random_state=random_state)
-        model, best_epoch = fit(model, train_graphs, val_graphs, params, random_state=random_state)
-
-        metrics = evaluate(model, val_graphs)
-        metrics["best_epoch"] = best_epoch
-        fold_metrics.append(metrics)
-
-    return {"params": params, "method": method, **aggregate_metrics(fold_metrics)}
+def _build(params, dims, random_state):
+    return _make_model(params, dims["node_feat_dim"], dims["global_feat_dim"], random_state=random_state)
 
 
-def fit_final_model(train_graphs, test_graphs, params, node_feat_dim, global_feat_dim,
-                     method="standardize", val_size=0.15, random_state=1):
-    """Refit with a small internal val slice for early stopping, evaluate once on test_graphs."""
-    tr_graphs, val_graphs = gcnp.holdout_split(train_graphs, test_size=val_size, random_state=random_state)
-    tr_scaled, val_scaled, scaler = gcnp.scale_graph_features(tr_graphs, val_graphs, method=method)
-    test_scaled = gcnp.transform_graph_features(test_graphs, scaler)
-
-    model = _make_model(params, node_feat_dim, global_feat_dim, random_state=random_state)
-    model, _ = fit(model, tr_scaled, val_scaled, params, random_state=random_state)
-
-    return model, evaluate(model, test_scaled), test_scaled
+def _fit(model, train, val, params):
+    model, best_epoch = fit(model, train.data, val.data, params)
+    return model, {"best_epoch": best_epoch}
 
 
-if __name__ == "__main__":
-    from utils.logger import Logger
-
-    log = Logger().log
-
-    graphs, n_skipped = gcnp.load_graph_dataset()
-    log(f"Loaded {len(graphs)} graphs ({n_skipped} skipped)")
-
-    node_feat_dim = graphs[0].x.shape[1]
-    global_feat_dim = graphs[0].global_feats.shape[1]
-    train_graphs, test_graphs = gcnp.holdout_split(graphs)
-
-    log(f"Random search: {len(PARAM_DISTRIBUTIONS)} hyperparams, 5-fold CV, train graphs {len(train_graphs)}")
-    results = random_search(_score_params, PARAM_DISTRIBUTIONS, n_iter=25,
-                             graphs=train_graphs, node_feat_dim=node_feat_dim,
-                             global_feat_dim=global_feat_dim, n_splits=5)
-
-    best = results[0]
-    log(f"\nBest CV params: {best['params']}")
-    log(f"CV F1:      {best['f1_mean']:.3f} +/- {best['f1_std']:.3f}")
-    log(f"CV ROC-AUC: {best['roc_auc_mean']:.3f} +/- {best['roc_auc_std']:.3f}")
-    log(f"CV PR-AUC:  {best['pr_auc_mean']:.3f} +/- {best['pr_auc_std']:.3f}")
-
-    model, metrics, test_scaled = fit_final_model(train_graphs, test_graphs, best["params"],
-                                                    node_feat_dim, global_feat_dim)
-    log(f"\nFinal test metrics: {({k: round(v, 3) for k, v in metrics.items()})}")
+SPEC = ModelSpec(
+    name="gcn",
+    param_distributions=PARAM_DISTRIBUTIONS,
+    graph=True,
+    build=_build,
+    fit=_fit,
+    predict=lambda model, ds: predict_raw(model, ds.data),
+    ranking=None,   # no native ranking; feature-count validation ranks via XGBoost
+)
