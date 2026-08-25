@@ -24,10 +24,9 @@ Comparison across the three models (over 10 sets of test data)
 (xgb+logreg) F1 0.769 / ROC-AUC 0.921; gcn F1 0.785 / ROC-AUC 0.926 — both match internal CV,
 so the models generalise with no overfitting.
 
-**Headline finding:** the task is saturated at F1 ≈ 0.78–0.79 / ROC-AUC ≈ 0.92. Adding
-descriptors (RDKit, xTB electronic) or more features past ~15–20 does not move the ceiling;
-it's data/label-limited, not feature-limited. At a 20-feature budget **logistic regression is
-the model to beat** — cheapest, most stable, best aggregate.
+Didn't go much above F1 ≈ 0.78–0.79 / ROC-AUC ≈ 0.92. Adding descriptors (RDKit, xTB electronic) 
+or more features past ~15–20 does not improve drastically.
+it's data/label-limited, no need to add loads of features.
 
 ## Research highlights
 
