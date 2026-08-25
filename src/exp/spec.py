@@ -41,23 +41,26 @@ def rank_features(ranker, scaled_train, params, random_state=1):
     return list(ranker.ranking(model, list(X.columns)).index)
 
 
-def cv_score(spec, train_ds, n_splits=5, select=False, ranker=None, ranker_params=None):
+def cv_score(spec, train_ds, n_splits=5, n_repeats=1, select=False, ranker=None, ranker_params=None):
     """A scorer(params, method, random_state) for random_search: CV on train_ds via the spec,
     aggregated to *_mean/*_std. select=True treats params["n_features"] as a dimension --
     features are ranked per fold (leak-free) and both folds cut to the top-N before fitting.
-    A cross-model ranker uses ranker_params; self-ranking uses the sampled params."""
+    A cross-model ranker uses ranker_params; self-ranking uses the sampled params. n_repeats>1
+    pools that many CV partitions (seeds random_state..+n_repeats-1) so the winner is robust to
+    fold assignment, at n_repeats x the cost."""
     def score(params, method, random_state):
         model_params = {k: v for k, v in params.items() if k != "n_features"}
         n = params.get("n_features") if select else None
         fold_metrics = []
-        for tr, val in train_ds.cv_folds(method=method, n_splits=n_splits, random_state=random_state):
-            if n is not None:
-                names = rank_features(ranker or spec, tr, ranker_params or model_params, random_state)[:n]
-                tr, val = tr.subset(names), val.subset(names)
-            model = spec.build(model_params, tr.dims, random_state)
-            model, aux = spec.fit(model, tr, val, model_params)
-            y, preds, proba = spec.predict(model, val)
-            fold_metrics.append({**classification_metrics(y, preds, proba), **aux})
+        for seed in range(random_state, random_state + n_repeats):
+            for tr, val in train_ds.cv_folds(method=method, n_splits=n_splits, random_state=seed):
+                if n is not None:
+                    names = rank_features(ranker or spec, tr, ranker_params or model_params, seed)[:n]
+                    tr, val = tr.subset(names), val.subset(names)
+                model = spec.build(model_params, tr.dims, seed)
+                model, aux = spec.fit(model, tr, val, model_params)
+                y, preds, proba = spec.predict(model, val)
+                fold_metrics.append({**classification_metrics(y, preds, proba), **aux})
         return {"params": model_params, "n_features": n, "method": method, **aggregate_metrics(fold_metrics)}
     return score
 

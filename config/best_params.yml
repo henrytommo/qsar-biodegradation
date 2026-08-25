@@ -1,133 +1,161 @@
 xgb:
   params:
-    max_depth: 4
-    learning_rate: 0.2
-    subsample: 1.0
-    colsample_bytree: 0.8
-    min_child_weight: 5
+    max_depth: 3
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 1.0
+    min_child_weight: 3
     gamma: 0.5
   method: standardize
-  n_features: 25
+  n_features: 45
   features:
   - SpMax_B(m)
+  - nN
   - SpMax_L
   - SpPosA_B(p)
   - J_Dz(e)
-  - nN
-  - SpMax_A
-  - SdssC
-  - SdO
-  - F02(C-N)
+  - MolLogP
   - SM6_B(m)
-  - HyWi_B(m)
-  - nCp
+  - SpMax_A
   - Psi_i_A
+  - SdssC
   - homo_lumo_gap
-  - nX
-  - Mi
-  - Me
-  - F03(C-N)
-  - LOC
+  - F02(C-N)
+  - TPSA
   - TI2_L
-  - C%
-  - nCb-
+  - nCp
+  - HyWi_B(m)
   - nO
-  - Psi_i_1d
+  - LOC
+  - nHM
+  - Me
+  - MolWt
+  - C%
   - SM6_L
+  - SdO
+  - Psi_i_1d
+  - Mi
+  - nX
+  - NssssC
+  - nArCOOR
+  - nCb-
+  - F03(C-O)
+  - nHDon
+  - C-026
+  - F03(C-N)
+  - nCrt
+  - F04(C-N)
+  - B03(C-Cl)
+  - nArNO2
+  - nCIR
+  - nN-N
+  - N-073
+  - nCRX3
+  - F01(N-N)
+  - B04(C-Br)
+  - B01(C-Br)
   provenance:
-    tuned: '2026-08-24'
-    cv_f1: 0.802
-    test_f1: 0.776
+    tuned: '2026-08-25'
+    cv_f1: 0.809
+    test_f1: 0.8
 logreg:
   params:
-    C: 3
-    l1_ratio: 1.0
-  method: normalize
-  n_features: 25
+    C: 0.1
+    l1_ratio: 0.0
+  method: standardize
+  n_features: 30
   features:
   - nCb-
-  - NssssC
-  - nCrt
-  - HyWi_B(m)
   - nHM
-  - nN-N
-  - nO
-  - F02(C-N)
-  - nArNO2
-  - C%
   - nN
-  - J_Dz(e)
-  - F03(C-O)
-  - nArCOOR
+  - nO
+  - nArNO2
+  - nN-N
+  - F02(C-N)
+  - NssssC
+  - HyWi_B(m)
+  - nCrt
   - Psi_i_A
-  - LOC
-  - SpMax_L
-  - SdssC
-  - SdO
-  - SpPosA_B(p)
-  - nHDon
-  - TI2_L
+  - C%
   - B03(C-Cl)
+  - LOC
+  - SpPosA_B(p)
+  - SpMax_L
+  - nX
+  - SdO
+  - nArCOOR
+  - J_Dz(e)
+  - SM6_B(m)
+  - F03(C-O)
+  - MolWt
+  - TPSA
+  - F04(C-N)
+  - SdssC
+  - C-026
+  - N-073
+  - nCp
   - homo_lumo_gap
-  - F01(N-N)
   provenance:
-    tuned: '2026-08-24'
-    cv_f1: 0.795
-    test_f1: 0.785
+    tuned: '2026-08-25'
+    cv_f1: 0.794
+    test_f1: 0.797
 gcn:
   params:
-    hidden_dim: 128
+    hidden_dim: 64
     n_gcn_layers: 2
     dropout: 0.2
     lr: 0.001
     weight_decay: 0.0001
-    batch_size: 64
+    batch_size: 32
   method: standardize
-  n_features: 42
+  n_features: 45
   features:
   - SpMax_B(m)
+  - nN
   - SpMax_L
   - SpPosA_B(p)
   - J_Dz(e)
-  - nN
-  - SpMax_A
-  - SdssC
-  - SdO
-  - F02(C-N)
+  - MolLogP
   - SM6_B(m)
-  - HyWi_B(m)
-  - nCp
+  - SpMax_A
   - Psi_i_A
+  - SdssC
   - homo_lumo_gap
-  - nX
-  - Mi
-  - Me
-  - F03(C-N)
-  - LOC
+  - F02(C-N)
+  - TPSA
   - TI2_L
-  - C%
-  - nCb-
+  - nCp
+  - HyWi_B(m)
   - nO
-  - Psi_i_1d
-  - SM6_L
-  - nArCOOR
-  - NssssC
+  - LOC
   - nHM
+  - Me
+  - MolWt
+  - C%
+  - SM6_L
+  - SdO
+  - Psi_i_1d
+  - Mi
+  - nX
+  - NssssC
+  - nArCOOR
+  - nCb-
   - F03(C-O)
   - nHDon
+  - C-026
+  - F03(C-N)
+  - nCrt
   - F04(C-N)
   - B03(C-Cl)
   - nArNO2
-  - nCrt
-  - C-026
+  - nCIR
+  - nN-N
+  - N-073
+  - nCRX3
   - F01(N-N)
   - B04(C-Br)
-  - N-073
   - B01(C-Br)
-  - nCRX3
-  - nN-N
-  - nCIR
   provenance:
-    tuned: '2026-08-24'
-    cv_f1: 0.796
-    test_f1: 0.79
+    tuned: '2026-08-25'
+    cv_f1: 0.804
+    test_f1: 0.795
