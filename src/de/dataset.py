@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch_geometric.data import Data
 
 from de.data import BINARY_FEATS, FEATURE_DICT, FEATURE_NAMES, load_data
-from de.dft_features import add_to_tabular as add_gap, compute_homo_lumo_gaps
+from de.dft_features import XTB_FEATURE_NAMES, add_to_tabular as add_xtb, compute_xtb_features_frame
 from de.rdkit_features import RDKIT_FEATURES, add_to_tabular as add_rdkit, compute_rdkit_features
 
 SCALERS = {"normalize": MinMaxScaler, "standardize": StandardScaler}
@@ -26,7 +26,7 @@ SMILES_DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "smiles_data.c
 # smiles_data.csv uses the original bracket notation (e.g. "F01[N-N]")
 _RENAME_MAP = {k: k.replace("[", "(").replace("]", ")") for k in FEATURE_DICT if k != "experimental class"}
 GLOBAL_FEATURE_NAMES = FEATURE_NAMES[:-1]
-ALL_GLOBAL_FEATURE_NAMES = GLOBAL_FEATURE_NAMES + ["homo_lumo_gap"] + list(RDKIT_FEATURES)
+ALL_GLOBAL_FEATURE_NAMES = GLOBAL_FEATURE_NAMES + XTB_FEATURE_NAMES + list(RDKIT_FEATURES)
 _SCALE_IDX = [i for i, name in enumerate(ALL_GLOBAL_FEATURE_NAMES) if name not in BINARY_FEATS]
 
 
@@ -66,13 +66,13 @@ def _load_graphs(log=print):
     or any missing global feature (e.g. xTB failed for the gap) are dropped."""
     df = pd.read_csv(SMILES_DATA_PATH).rename(columns=_RENAME_MAP)
     y = np.where(df["Class"] == "RB", 1, 0)
-    gaps = compute_homo_lumo_gaps(df["Smiles"].tolist(), log=log)
+    xtb_feats = compute_xtb_features_frame(df["Smiles"].tolist(), log=log)
     rdkit_feats = compute_rdkit_features(df["Smiles"].tolist())
 
     graphs = []
     n_skipped = 0
     for i, row in df.iterrows():
-        extra = np.append(gaps.iloc[i], rdkit_feats.iloc[i].to_numpy(dtype=float))
+        extra = np.append(xtb_feats.iloc[i].to_numpy(dtype=float), rdkit_feats.iloc[i].to_numpy(dtype=float))
         global_feats = np.append(row[GLOBAL_FEATURE_NAMES].to_numpy(dtype=float), extra)
         graph = None if np.isnan(global_feats).any() else smiles_to_graph(
             row["Smiles"], global_feats=global_feats, y=y[i])
@@ -115,7 +115,7 @@ class Dataset:
             return cls(data=graphs, feature_names=list(ALL_GLOBAL_FEATURE_NAMES),
                        scale_idx=list(_SCALE_IDX), n_skipped=n_skipped)
         X, y = load_data()
-        X = add_gap(X, log=log)
+        X = add_xtb(X, log=log)
         X = add_rdkit(X, SMILES_DATA_PATH, log=log)
         keep = X.notna().all(axis=1).to_numpy()   # drop any row with a missing feature (no imputation)
         if not keep.all():
