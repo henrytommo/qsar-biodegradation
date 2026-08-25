@@ -60,26 +60,44 @@ def smiles_to_graph(smiles, global_feats=None, y=None):
     return graph
 
 
-def _load_graphs(log=print):
-    """One PyG graph per molecule from smiles_data.csv: 41 QSAR descriptors + the HOMO-LUMO
-    gap as global features, Class (RB=1/NRB=0) as label. Molecules with an unparseable SMILES
-    or any missing global feature (e.g. xTB failed for the gap) are dropped."""
-    df = pd.read_csv(SMILES_DATA_PATH).rename(columns=_RENAME_MAP)
-    y = np.where(df["Class"] == "RB", 1, 0)
-    xtb_feats = compute_xtb_features_frame(df["Smiles"].tolist(), log=log)
+def _label_column(df):
+    """Name of the RB/NRB label column ('Class' in training, 'class' in the external set), or None."""
+    return next((c for c in ("Class", "class") if c in df.columns), None)
+
+
+def _global_feature_frame(df, log=print):
+    """The 53 global features (41 qsar + xTB + RDKit) for a molecule CSV, in
+    ALL_GLOBAL_FEATURE_NAMES order and row-aligned to df (qsar columns read straight from the
+    file, xTB/RDKit computed from its Smiles)."""
+    qsar = df[GLOBAL_FEATURE_NAMES].reset_index(drop=True)
+    xtb = compute_xtb_features_frame(df["Smiles"].tolist(), log=log)
     rdkit_feats = compute_rdkit_features(df["Smiles"].tolist())
+    return pd.concat([qsar, xtb, rdkit_feats], axis=1)
+
+
+def _load_graphs(path=SMILES_DATA_PATH, labeled=True, log=print):
+    """One PyG graph per molecule from a SMILES CSV (qsar descriptors + Smiles [+ label]):
+    41 QSAR descriptors + xTB + RDKit features as global features, RB=1/NRB=0 as label when
+    labeled (else a 0 placeholder). Molecules with an unparseable SMILES or any missing global
+    feature (e.g. xTB failed) are dropped. Each surviving graph carries .mol_id (its CSV row
+    index) so inference can align predictions back to the input."""
+    df = pd.read_csv(path).rename(columns=_RENAME_MAP)
+    label_col = _label_column(df)
+    y = np.where(df[label_col] == "RB", 1, 0) if (labeled and label_col) else np.zeros(len(df), dtype=int)
+    feats = _global_feature_frame(df, log=log)
 
     graphs = []
     n_skipped = 0
     for i, row in df.iterrows():
-        extra = np.append(xtb_feats.iloc[i].to_numpy(dtype=float), rdkit_feats.iloc[i].to_numpy(dtype=float))
-        global_feats = np.append(row[GLOBAL_FEATURE_NAMES].to_numpy(dtype=float), extra)
+        global_feats = feats.iloc[i].to_numpy(dtype=float)
         graph = None if np.isnan(global_feats).any() else smiles_to_graph(
-            row["Smiles"], global_feats=global_feats, y=y[i])
+            row["Smiles"], global_feats=global_feats, y=int(y[i]))
         if graph is None:
             n_skipped += 1
             continue
-        graph.status = row["Status"]
+        graph.mol_id = int(i)
+        if "Status" in df.columns:
+            graph.status = row["Status"]
         graphs.append(graph)
     return graphs, n_skipped
 
@@ -121,6 +139,32 @@ class Dataset:
         if not keep.all():
             log(f"Dropped {int((~keep).sum())} rows with missing feature values")
             X, y = X[keep].reset_index(drop=True), y[keep]
+        binary = [f for f in BINARY_FEATS if f in X.columns]
+        return cls(data=X, y=y, binary_feats=binary, feature_names=list(X.columns))
+
+    @classmethod
+    def from_csv(cls, path, graph=False, labeled=True, log=print):
+        """Build a Dataset from any molecule CSV in the smiles_data format (qsar descriptors +
+        Smiles [+ RB/NRB label]) -- the inference featuriser. Same 53 features as load(), computed
+        the same way. Rows with any missing feature are dropped and logged; surviving molecules
+        keep their CSV row index (tabular: DataFrame index; graph: g.mol_id) so predictions can be
+        aligned back to the input. labeled=False skips the label (y=None / 0-placeholder on graphs)."""
+        if graph:
+            graphs, n_skipped = _load_graphs(path=path, labeled=labeled, log=log)
+            if n_skipped:
+                log(f"from_csv: {n_skipped} molecules dropped for unparseable SMILES / missing features")
+            return cls(data=graphs, feature_names=list(ALL_GLOBAL_FEATURE_NAMES),
+                       scale_idx=list(_SCALE_IDX), n_skipped=n_skipped)
+
+        df = pd.read_csv(path).rename(columns=_RENAME_MAP)
+        label_col = _label_column(df)
+        X = _global_feature_frame(df, log=log)
+        y = np.where(df[label_col] == "RB", 1, 0) if (labeled and label_col) else None
+        keep = X.notna().all(axis=1).to_numpy()
+        if not keep.all():
+            log(f"from_csv: {int((~keep).sum())} rows dropped for missing feature values")
+        X = X[keep]                                   # index preserved = CSV row id of survivors
+        y = y[keep] if y is not None else None
         binary = [f for f in BINARY_FEATS if f in X.columns]
         return cls(data=X, y=y, binary_feats=binary, feature_names=list(X.columns))
 

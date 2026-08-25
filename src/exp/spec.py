@@ -65,18 +65,25 @@ def cv_score(spec, train_ds, n_splits=5, n_repeats=1, select=False, ranker=None,
     return score
 
 
-def evaluate_final(spec, train_ds, test_ds, params, method="standardize", random_state=1):
-    """Refit on train_ds, evaluate once on test_ds. val_size>0 carves an internal early-stopping
-    slice; val_size 0 fits on the full train. Scaler fit on train only."""
+def fit_final(spec, train_ds, params, method="standardize", random_state=1):
+    """Fit model + scaler on train_ds. val_size>0 carves an internal early-stopping slice (scaler
+    fit on the reduced train); val_size 0 fits on the full train (scaler fit on all of it). This is
+    the fitting half of evaluate_final, factored out so inference can reuse the exact procedure the
+    reported metrics came from. Returns (model, fitted_scaler, aux)."""
     if spec.val_size:
         tr, val = train_ds.holdout(test_size=spec.val_size, random_state=random_state)
         tr_s, val_s, scaler = tr.scale(val, method=method)
-        test_s = test_ds.transform(scaler)
     else:
-        tr_s, test_s, scaler = train_ds.scale(test_ds, method=method)
+        tr_s, _, scaler = train_ds.scale(train_ds, method=method)
         val_s = None
 
     model = spec.build(params, train_ds.dims, random_state)
-    model, _ = spec.fit(model, tr_s, val_s, params)
-    y, preds, proba = spec.predict(model, test_s)
+    model, aux = spec.fit(model, tr_s, val_s, params)
+    return model, scaler, aux
+
+
+def evaluate_final(spec, train_ds, test_ds, params, method="standardize", random_state=1):
+    """Refit on train_ds, evaluate once on test_ds (scaler fit on train only, applied to test)."""
+    model, scaler, _ = fit_final(spec, train_ds, params, method, random_state)
+    y, preds, proba = spec.predict(model, test_ds.transform(scaler))
     return model, classification_metrics(y, preds, proba)
