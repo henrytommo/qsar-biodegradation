@@ -43,4 +43,52 @@ currently:
 │ PR-AUC  │ 0.874 ± 0.045 │ 0.914         │
 └─────────┴───────────────┴───────────────┘
 
+Best params: hidden_dim=32, n_gcn_layers=3, dropout=0.3, lr=0.01, weight_decay=0.001, batch_size=64.
+
 - pretty similar to the xgb and lr experiments - so likely we need to go back to the features to see if there are any improvements to make there.
+
+not a huge amount of data so diong over 10 random samples of the test data:
+┌─────────┬───────────────┬───────────────┬───────────────┬───────────────┬───────────────┐
+│  Model  │      F1       │   Precision   │    Recall     │    ROC-AUC    │    PR-AUC     │
+├─────────┼───────────────┼───────────────┼───────────────┼───────────────┼───────────────┤
+│ XGBoost │ 0.790 ± 0.041 │ 0.769 ± 0.058 │ 0.815 ± 0.057 │ 0.923 ± 0.022 │ 0.879 ± 0.036 │
+├─────────┼───────────────┼───────────────┼───────────────┼───────────────┼───────────────┤
+│ LogReg  │ 0.799 ± 0.029 │ 0.742 ± 0.035 │ 0.868 ± 0.041 │ 0.923 ± 0.017 │ 0.868 ± 0.033 │
+├─────────┼───────────────┼───────────────┼───────────────┼───────────────┼───────────────┤
+│ GCN     │ 0.790 ± 0.031 │ 0.719 ± 0.071 │ 0.885 ± 0.050 │ 0.924 ± 0.015 │ 0.864 ± 0.027 │
+└─────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┘
+
+
+## features, again
+- now that we have chemical structures, we can check for presence of certain functional groups.
+- additionally: this is a biodegradability prediction by microbes. the SMILES data contains stereoisomeric compounds, and chiral molecules will interact differently with different enzymes. this won't be picked up by the way im currently doing my gcn, so we can add stereisomer flags as an extra feature
+    - or not, only about 1% out of 1000 molecules have chiral centres or stereo double bonds. tried out a GINEConv but worse results. pros won;t include this.
+- next, adding a feature corresponding to homo-lumo gap to hopefully try and give an idication of how hard to break down these molecules. dxtb looks like the easiest, quickest estimate, so use that (along with rdkit to estimate 3d structure)
+
+
+adding homo lumo gap and doing some feature removal - during cv search, search over feature ranking as well as hyperparams. set up a reusable experiment pipeline that saves best configs to yaml file - allows for manual selection of feats if warranted.
+homo lumo gap: using dxtb python package - semi empirical. not too computationally expensive, but added a cache to avoid re-calculating on the same feats.
+pretty similar across all metrics, now to add some more features now that pipeline is set up.
+
+┌────────┬──────────┬───────────────┬───────────┬────────┬─────────┬────────┐
+│ Model  │  Config  │      F1       │ Precision │ Recall │ ROC-AUC │ PR-AUC │
+├────────┼──────────┼───────────────┼───────────┼────────┼─────────┼────────┤
+│ xgb    │ 25 feats │ 0.773 ± 0.015 │ 0.734     │ 0.820  │ 0.912   │ 0.866  │
+├────────┼──────────┼───────────────┼───────────┼────────┼─────────┼────────┤
+│ logreg │ 25 feats │ 0.792 ± 0.026 │ 0.730     │ 0.868  │ 0.922   │ 0.867  │
+├────────┼──────────┼───────────────┼───────────┼────────┼─────────┼────────┤
+│ gcn    │ 42 feats │ 0.802 ± 0.025 │ 0.747     │ 0.869  │ 0.928   │ 0.871  │
+└────────┴──────────┴───────────────┴───────────┴────────┴─────────┴────────┘
+
+## experimentation pipeline
+missing feats? it's a curated dataset so have kind of skipped the cleaning step. but for homo-lumo gap failures, this happens 1/1055 times, so just drop this as will be hard to compute.
+
+generate report for rare/low importance features
+
+3 sweeps: feature selection, then hyperparam tuning, then model comparison.
+
+getting an experiment process i was happy with has taken a few iterations (and there will probs be more as i go through), but this is a good place to start. next some more features.
+
+
+
+

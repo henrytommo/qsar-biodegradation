@@ -1,0 +1,133 @@
+xgb:
+  params:
+    max_depth: 4
+    learning_rate: 0.2
+    subsample: 1.0
+    colsample_bytree: 0.8
+    min_child_weight: 5
+    gamma: 0.5
+  method: standardize
+  n_features: 25
+  features:
+  - SpMax_B(m)
+  - SpMax_L
+  - SpPosA_B(p)
+  - J_Dz(e)
+  - nN
+  - SpMax_A
+  - SdssC
+  - SdO
+  - F02(C-N)
+  - SM6_B(m)
+  - HyWi_B(m)
+  - nCp
+  - Psi_i_A
+  - homo_lumo_gap
+  - nX
+  - Mi
+  - Me
+  - F03(C-N)
+  - LOC
+  - TI2_L
+  - C%
+  - nCb-
+  - nO
+  - Psi_i_1d
+  - SM6_L
+  provenance:
+    tuned: '2026-08-24'
+    cv_f1: 0.802
+    test_f1: 0.776
+logreg:
+  params:
+    C: 3
+    l1_ratio: 1.0
+  method: normalize
+  n_features: 25
+  features:
+  - nCb-
+  - NssssC
+  - nCrt
+  - HyWi_B(m)
+  - nHM
+  - nN-N
+  - nO
+  - F02(C-N)
+  - nArNO2
+  - C%
+  - nN
+  - J_Dz(e)
+  - F03(C-O)
+  - nArCOOR
+  - Psi_i_A
+  - LOC
+  - SpMax_L
+  - SdssC
+  - SdO
+  - SpPosA_B(p)
+  - nHDon
+  - TI2_L
+  - B03(C-Cl)
+  - homo_lumo_gap
+  - F01(N-N)
+  provenance:
+    tuned: '2026-08-24'
+    cv_f1: 0.795
+    test_f1: 0.785
+gcn:
+  params:
+    hidden_dim: 128
+    n_gcn_layers: 2
+    dropout: 0.2
+    lr: 0.001
+    weight_decay: 0.0001
+    batch_size: 64
+  method: standardize
+  n_features: 42
+  features:
+  - SpMax_B(m)
+  - SpMax_L
+  - SpPosA_B(p)
+  - J_Dz(e)
+  - nN
+  - SpMax_A
+  - SdssC
+  - SdO
+  - F02(C-N)
+  - SM6_B(m)
+  - HyWi_B(m)
+  - nCp
+  - Psi_i_A
+  - homo_lumo_gap
+  - nX
+  - Mi
+  - Me
+  - F03(C-N)
+  - LOC
+  - TI2_L
+  - C%
+  - nCb-
+  - nO
+  - Psi_i_1d
+  - SM6_L
+  - nArCOOR
+  - NssssC
+  - nHM
+  - F03(C-O)
+  - nHDon
+  - F04(C-N)
+  - B03(C-Cl)
+  - nArNO2
+  - nCrt
+  - C-026
+  - F01(N-N)
+  - B04(C-Br)
+  - N-073
+  - B01(C-Br)
+  - nCRX3
+  - nN-N
+  - nCIR
+  provenance:
+    tuned: '2026-08-24'
+    cv_f1: 0.796
+    test_f1: 0.79
