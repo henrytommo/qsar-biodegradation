@@ -1,177 +1,101 @@
 xgb:
   params:
-    max_depth: 4
-    learning_rate: 0.1
-    subsample: 0.8
-    colsample_bytree: 0.6
-    min_child_weight: 5
+    max_depth: 6
+    learning_rate: 0.2
+    subsample: 0.6
+    colsample_bytree: 0.8
+    min_child_weight: 1
     gamma: 1.0
   method: standardize
-  n_features: 53
+  n_features: 20
   features:
   - SpMax_B(m)
+  - SpPosA_B(p)
   - SpMax_L
   - wbo_max
-  - SpPosA_B(p)
+  - J_Dz(e)
+  - MolLogP
+  - ip
+  - fukui_plus_max
+  - Psi_i_1d
   - nN
   - SpMax_A
-  - ip
-  - J_Dz(e)
-  - SM6_B(m)
-  - MolLogP
-  - TPSA
-  - Psi_i_A
-  - SdssC
-  - fukui_minus_max
-  - nHM
   - F02(C-N)
-  - homo_lumo_gap
-  - fukui_plus_max
-  - TI2_L
-  - Me
-  - NssssC
-  - LOC
-  - SdO
-  - nCp
   - SM6_L
-  - ea
-  - nX
-  - nO
-  - dispersion_energy
-  - electrophilicity
-  - C%
-  - HyWi_B(m)
-  - F03(C-N)
-  - wbo_total
-  - nCb-
-  - Mi
-  - F03(C-O)
-  - nHDon
-  - MolWt
-  - F04(C-N)
-  - Psi_i_1d
-  - nCrt
-  - C-026
-  - nArCOOR
-  - nCIR
-  - B04(C-Br)
-  - N-073
-  - nN-N
-  - nCRX3
-  - F01(N-N)
-  - nArNO2
-  - B03(C-Cl)
-  - B01(C-Br)
+  - homo_lumo_gap
+  - LOC
+  - SM6_B(m)
+  - TPSA
+  - fukui_minus_max
+  - TI2_L
+  - SdssC
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.802
-    test_f1: 0.779
+    cv_f1: 0.805
+    test_f1: 0.764
 logreg:
   params:
-    C: 0.1
-    l1_ratio: 0.0
-  method: standardize
-  n_features: 30
+    C: 3
+    l1_ratio: 1.0
+  method: normalize
+  n_features: 20
   features:
-  - nCb-
-  - nArNO2
   - NssssC
+  - nCb-
   - nHM
-  - ip
-  - nN-N
-  - nO
-  - nN
-  - LOC
+  - nArNO2
   - nCrt
+  - nO
+  - nN-N
   - F02(C-N)
-  - SpPosA_B(p)
-  - HyWi_B(m)
-  - SpMax_L
-  - Psi_i_A
+  - ip
+  - SM6_B(m)
+  - nN
   - C%
+  - LOC
   - nArCOOR
   - F03(C-O)
-  - SM6_B(m)
-  - nX
   - J_Dz(e)
-  - fukui_minus_max
   - SdssC
-  - F04(C-N)
-  - B03(C-Cl)
-  - nCRX3
-  - homo_lumo_gap
-  - nCp
+  - Psi_i_A
   - nHDon
-  - ea
+  - HyWi_B(m)
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.793
-    test_f1: 0.803
+    cv_f1: 0.789
+    test_f1: 0.787
 gcn:
   params:
     hidden_dim: 64
-    n_gcn_layers: 2
-    dropout: 0.3
-    lr: 0.005
-    weight_decay: 0.0001
-    batch_size: 32
+    n_gcn_layers: 3
+    dropout: 0.1
+    lr: 0.001
+    weight_decay: 0.0
+    batch_size: 64
   method: standardize
-  n_features: 53
+  n_features: 20
   features:
   - SpMax_B(m)
+  - SpPosA_B(p)
   - SpMax_L
   - wbo_max
-  - SpPosA_B(p)
+  - J_Dz(e)
+  - MolLogP
+  - ip
+  - fukui_plus_max
+  - Psi_i_1d
   - nN
   - SpMax_A
-  - ip
-  - J_Dz(e)
-  - SM6_B(m)
-  - MolLogP
-  - TPSA
-  - Psi_i_A
-  - SdssC
-  - fukui_minus_max
-  - nHM
   - F02(C-N)
-  - homo_lumo_gap
-  - fukui_plus_max
-  - TI2_L
-  - Me
-  - NssssC
-  - LOC
-  - SdO
-  - nCp
   - SM6_L
-  - ea
-  - nX
-  - nO
-  - dispersion_energy
-  - electrophilicity
-  - C%
-  - HyWi_B(m)
-  - F03(C-N)
-  - wbo_total
-  - nCb-
-  - Mi
-  - F03(C-O)
-  - nHDon
-  - MolWt
-  - F04(C-N)
-  - Psi_i_1d
-  - nCrt
-  - C-026
-  - nArCOOR
-  - nCIR
-  - B04(C-Br)
-  - N-073
-  - nN-N
-  - nCRX3
-  - F01(N-N)
-  - nArNO2
-  - B03(C-Cl)
-  - B01(C-Br)
+  - homo_lumo_gap
+  - LOC
+  - SM6_B(m)
+  - TPSA
+  - fukui_minus_max
+  - TI2_L
+  - SdssC
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.806
-    test_f1: 0.832
+    cv_f1: 0.778
+    test_f1: 0.81
