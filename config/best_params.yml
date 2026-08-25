@@ -1,63 +1,71 @@
 xgb:
   params:
-    max_depth: 3
+    max_depth: 4
     learning_rate: 0.1
     subsample: 0.8
-    colsample_bytree: 1.0
-    min_child_weight: 3
-    gamma: 0.5
+    colsample_bytree: 0.6
+    min_child_weight: 5
+    gamma: 1.0
   method: standardize
-  n_features: 45
+  n_features: 53
   features:
   - SpMax_B(m)
-  - nN
   - SpMax_L
+  - wbo_max
   - SpPosA_B(p)
-  - J_Dz(e)
-  - MolLogP
-  - SM6_B(m)
+  - nN
   - SpMax_A
+  - ip
+  - J_Dz(e)
+  - SM6_B(m)
+  - MolLogP
+  - TPSA
   - Psi_i_A
   - SdssC
-  - homo_lumo_gap
-  - F02(C-N)
-  - TPSA
-  - TI2_L
-  - nCp
-  - HyWi_B(m)
-  - nO
-  - LOC
+  - fukui_minus_max
   - nHM
+  - F02(C-N)
+  - homo_lumo_gap
+  - fukui_plus_max
+  - TI2_L
   - Me
-  - MolWt
-  - C%
-  - SM6_L
-  - SdO
-  - Psi_i_1d
-  - Mi
-  - nX
   - NssssC
-  - nArCOOR
+  - LOC
+  - SdO
+  - nCp
+  - SM6_L
+  - ea
+  - nX
+  - nO
+  - dispersion_energy
+  - electrophilicity
+  - C%
+  - HyWi_B(m)
+  - F03(C-N)
+  - wbo_total
   - nCb-
+  - Mi
   - F03(C-O)
   - nHDon
-  - C-026
-  - F03(C-N)
-  - nCrt
+  - MolWt
   - F04(C-N)
-  - B03(C-Cl)
-  - nArNO2
+  - Psi_i_1d
+  - nCrt
+  - C-026
+  - nArCOOR
   - nCIR
-  - nN-N
+  - B04(C-Br)
   - N-073
+  - nN-N
   - nCRX3
   - F01(N-N)
-  - B04(C-Br)
+  - nArNO2
+  - B03(C-Cl)
   - B01(C-Br)
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.809
-    test_f1: 0.8
+    cv_f1: 0.802
+    test_f1: 0.779
 logreg:
   params:
     C: 0.1
@@ -66,96 +74,104 @@ logreg:
   n_features: 30
   features:
   - nCb-
-  - nHM
-  - nN
-  - nO
   - nArNO2
-  - nN-N
-  - F02(C-N)
   - NssssC
-  - HyWi_B(m)
+  - nHM
+  - ip
+  - nN-N
+  - nO
+  - nN
+  - LOC
   - nCrt
+  - F02(C-N)
+  - SpPosA_B(p)
+  - HyWi_B(m)
+  - SpMax_L
   - Psi_i_A
   - C%
-  - B03(C-Cl)
-  - LOC
-  - SpPosA_B(p)
-  - SpMax_L
-  - nX
-  - SdO
   - nArCOOR
-  - J_Dz(e)
-  - SM6_B(m)
   - F03(C-O)
-  - MolWt
-  - TPSA
-  - F04(C-N)
+  - SM6_B(m)
+  - nX
+  - J_Dz(e)
+  - fukui_minus_max
   - SdssC
-  - C-026
-  - N-073
-  - nCp
+  - F04(C-N)
+  - B03(C-Cl)
+  - nCRX3
   - homo_lumo_gap
+  - nCp
+  - nHDon
+  - ea
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.794
-    test_f1: 0.797
+    cv_f1: 0.793
+    test_f1: 0.803
 gcn:
   params:
     hidden_dim: 64
     n_gcn_layers: 2
-    dropout: 0.2
-    lr: 0.001
+    dropout: 0.3
+    lr: 0.005
     weight_decay: 0.0001
     batch_size: 32
   method: standardize
-  n_features: 45
+  n_features: 53
   features:
   - SpMax_B(m)
-  - nN
   - SpMax_L
+  - wbo_max
   - SpPosA_B(p)
-  - J_Dz(e)
-  - MolLogP
-  - SM6_B(m)
+  - nN
   - SpMax_A
+  - ip
+  - J_Dz(e)
+  - SM6_B(m)
+  - MolLogP
+  - TPSA
   - Psi_i_A
   - SdssC
-  - homo_lumo_gap
-  - F02(C-N)
-  - TPSA
-  - TI2_L
-  - nCp
-  - HyWi_B(m)
-  - nO
-  - LOC
+  - fukui_minus_max
   - nHM
+  - F02(C-N)
+  - homo_lumo_gap
+  - fukui_plus_max
+  - TI2_L
   - Me
-  - MolWt
-  - C%
-  - SM6_L
-  - SdO
-  - Psi_i_1d
-  - Mi
-  - nX
   - NssssC
-  - nArCOOR
+  - LOC
+  - SdO
+  - nCp
+  - SM6_L
+  - ea
+  - nX
+  - nO
+  - dispersion_energy
+  - electrophilicity
+  - C%
+  - HyWi_B(m)
+  - F03(C-N)
+  - wbo_total
   - nCb-
+  - Mi
   - F03(C-O)
   - nHDon
-  - C-026
-  - F03(C-N)
-  - nCrt
+  - MolWt
   - F04(C-N)
-  - B03(C-Cl)
-  - nArNO2
+  - Psi_i_1d
+  - nCrt
+  - C-026
+  - nArCOOR
   - nCIR
-  - nN-N
+  - B04(C-Br)
   - N-073
+  - nN-N
   - nCRX3
   - F01(N-N)
-  - B04(C-Br)
+  - nArNO2
+  - B03(C-Cl)
   - B01(C-Br)
   provenance:
     tuned: '2026-08-25'
-    cv_f1: 0.804
-    test_f1: 0.795
+    cv_f1: 0.806
+    test_f1: 0.832

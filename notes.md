@@ -82,7 +82,7 @@ there are loads of rdkit descriptors that can be added. will start with:
 - molecular weight (Descriptors.MolWt): a larger molecule will be slower to cross bacterial membranes. however we have a few feats already that denote number of atoms and mass weighted/size correlated counts. so molecular weight will likely have some collinearity with these.
 - topological polar surface area (Descriptors.TPSA): indication of hydrogen bonding ability - affects bioavailability. again, we have nHDon (h bond donors) as a feat already, so will see some multicollinearity.
 
-checked overlap first: none of the three are directly present (no lipophilicity descriptor at all - MolWt/TPSA have related-but-distinct feats as expected). added all three -> 45 feats total. cheap 2D descriptors so no cache (unlike the xTB gap). MolLogP ranks high in the tree ranking (used by xgb + gcn) but logreg doesn't pick it up (a linear model gets less from logP); TPSA selected by all three; MolWt selected by logreg + gcn (ranks lower, the flagged collinearity).
+checked overlap first: none of the three are directly present (no lipophilicity descriptor at all - MolWt/TPSA have related feats). added all three -> 45 feats total. cheap 2D descriptors so no cache (unlike the xTB gap). MolLogP ranks high in the tree ranking (used by xgb + gcn) but logreg doesn't pick it up (a linear model gets less from logP); TPSA selected by all three; MolWt selected by logreg + gcn (ranks lower, the flagged collinearity).
 
 logreg improved a touch (it's the model that took MolWt+TPSA), xgb/gcn flat within noise. not a breakthrough.
 
@@ -99,6 +99,46 @@ final 10-seed comparison at the 45-feat, 3x-repeated-CV configs:
 | gcn | 45 feats | 0.794 ± 0.029 | 0.742 ± 0.054 | 0.858 ± 0.031 | 0.925 ± 0.015 | 0.870 ± 0.030 |
 
 still tied within noise on every column. logreg best recall (0.882), gcn best precision/ROC-AUC/PR-AUC (better-calibrated ranking, more conservative), xgb trails.
+
+
+## using dxtb for more dft feats
+
+- ionisation potential, electron affinity: indicator for single electron transfer (ofen first step of breakdown)
+- fukui function: nucleophilic and electrophilic attack
+- wiberg bond order - bond strengths
+- dispersion_energy
+
+now up to 53 feats - so many
+
+| Model | F1 | Precision | Recall | ROC-AUC | PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| xgb | 0.779 ± 0.033 | 0.749 ± 0.028 | 0.813 ± 0.047 | 0.916 ± 0.019 | 0.876 ± 0.030 |
+| logreg | 0.788 ± 0.019 | 0.729 ± 0.027 | 0.861 ± 0.037 | 0.924 ± 0.016 | 0.869 ± 0.033 |
+| gcn | 0.789 ± 0.025 | 0.740 ± 0.050 | 0.848 ± 0.039 | 0.921 ± 0.020 | 0.862 ± 0.037 |
+ still getting similar results, although wbo_max ranked 3rd by xgb.
+
+
+## do the models fail on the same molecules? (error analysis)
+ran all 3 models over 10 seeds where every seed shares ONE stratified test split, so each (molecule, seed) gets 3 matched right/wrong calls + probas.
+
+errors are only partly shared. of 469 misclassified (mol, seed) instances: 43% wrong by all 3, 23% by 2, but 34% wrong by just ONE model. pairwise error corr (phi): xgb-logreg 0.61, xgb-gcn 0.65, logreg-gcn 0.77. so logreg and gcn make more of the same mistakes.
+
+hard core: 97 molecules (9.2%) wrong by all 3 in >=50% of their appearances. label mix RB 34 / NRB 63 = 35% RB, same as the dataset - not a one-class problem.
+
+
+## ensembling
+soft-vote (average the probas). beats every single model on every metric, matched splits:
+
+| Model | F1 | Precision | Recall | ROC-AUC | PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| xgb | 0.779 ± 0.033 | 0.749 | 0.813 | 0.916 | 0.876 |
+| logreg | 0.788 ± 0.019 | 0.729 | 0.861 | 0.924 | 0.869 |
+| gcn | 0.789 ± 0.025 | 0.740 | 0.848 | 0.921 | 0.862 |
+| xgb+logreg | 0.797 ± 0.028 | 0.759 | 0.841 | 0.928 | 0.887 |
+| all three | 0.799 ± 0.012 | 0.748 | 0.858 | 0.929 | 0.888 |
+
+gcn is droppable: xgb+logreg - all three = -0.001 ± 0.019 f1 (tied 5/10 seeds), and the 2-way has the best precision of anything tested (0.759). gcn adds ~nothing to the mean - the only thing the 3-way buys is less seed-to-seed variance (std 0.012 vs 0.028).
+
 
 
 
