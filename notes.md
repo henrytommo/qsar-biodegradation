@@ -162,16 +162,12 @@ on the external set gcn slightly beats the ensemble on EVERY metric (f1 0.785 vs
 53 features is way too many - adding new feats doesn't have a corresponding improvement, so will try capping. reduces complexity and maybe overfitting. note that gcn feat importances are taken from xgb feature importances - could maybe look at GNNExplainer in pytorch geometric BUT it's not as quick as xgb feat importance and would need to be run for each fold.. also better for looking at explainability for one molecule rather than an overall feature importance.
 added a CAP_FEATURES const to exp/tune.py: when set (=20), --select pins n_features to it instead of searching the count grid, so the written config keeps exactly 20 feats. re-tuned all 3 with --select --write (order xgb -> logreg -> gcn, so gcn ranks against the freshly-tuned xgb). config/best_params.yml now holds 20 feats per model.
 
-fresh single-holdout tune output:
+| Model | F1 | Precision | Recall | ROC-AUC | PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| xgb | 0.767 ± 0.020 | 0.772 ± 0.045 | 0.766 ± 0.042 | 0.910 ± 0.013 | 0.863 ± 0.028 |
+| logreg | 0.789 ± 0.028 | 0.733 ± 0.036 | 0.856 ± 0.040 | 0.923 ± 0.016 | 0.870 ± 0.027 |
+| gcn | 0.769 ± 0.031 | 0.707 ± 0.045 | 0.846 ± 0.040 | 0.905 ± 0.024 | 0.836 ± 0.048 |
 
-| Model | | F1 | Precision | Recall | ROC-AUC | PR-AUC |
-| --- | --- | --- | --- | --- | --- | --- |
-| xgb | cv | 0.805 | 0.792 | 0.820 | 0.921 | 0.876 |
-| | test | 0.764 | 0.753 | 0.775 | 0.909 | 0.867 |
-| logreg | cv | 0.789 | 0.733 | 0.856 | 0.914 | 0.847 |
-| | test | 0.787 | 0.708 | 0.887 | 0.936 | 0.887 |
-| gcn | cv | 0.778 | 0.720 | 0.848 | 0.906 | 0.840 |
-| | test | 0.810 | 0.736 | 0.901 | 0.936 | 0.897 |
 
 basically no loss from dropping 53 -> 20 feats.
 
