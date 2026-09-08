@@ -6,7 +6,8 @@ structure. Binary classification on the ~1,050-molecule QSAR dataset from
 xgb, logistic regression, and a graph neural network with a shared experiment pipeline.
 
 Mostly an exploration project to use GNNs on a molecular dataset - has the beginnings of a 
-reusable pipeline for my own ease when comparing to other models.
+reusable pipeline for my own ease when comparing to other models. Final verdict is that GCN
+isn't the best option for this - more complex for not much gain (see notes.md)
 
 ## Results
 
@@ -28,7 +29,7 @@ Didn't go much above F1 ≈ 0.78–0.79 / ROC-AUC ≈ 0.92. Adding descriptors (
 or more features past ~15–20 does not improve drastically.
 it's data/label-limited, no need to add loads of features.
 
-## Research highlights
+## highlights
 
 The full running log is in **[notes.md](notes.md)**:
 

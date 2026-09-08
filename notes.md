@@ -82,13 +82,12 @@ there are loads of rdkit descriptors that can be added. will start with:
 - molecular weight (Descriptors.MolWt): a larger molecule will be slower to cross bacterial membranes. however we have a few feats already that denote number of atoms and mass weighted/size correlated counts. so molecular weight will likely have some collinearity with these.
 - topological polar surface area (Descriptors.TPSA): indication of hydrogen bonding ability - affects bioavailability. again, we have nHDon (h bond donors) as a feat already, so will see some multicollinearity.
 
-checked overlap first: none of the three are directly present (no lipophilicity descriptor at all - MolWt/TPSA have related feats). added all three -> 45 feats total. cheap 2D descriptors so no cache (unlike the xTB gap). MolLogP ranks high in the tree ranking (used by xgb + gcn) but logreg doesn't pick it up (a linear model gets less from logP); TPSA selected by all three; MolWt selected by logreg + gcn (ranks lower, the flagged collinearity).
+checked overlap first: none of the three are directly present (no lipophilicity descriptor at all - MolWt/TPSA have related feats). added all three -> 45 feats total. quick calc for 2D descriptors so no cache (unlike xTB). MolLogP ranks high in the tree ranking (used by xgb + gcn) but logreg doesn't pick it up (a linear model gets less from logP); TPSA selected by all three; MolWt selected by logreg + gcn (ranks lower, the flagged collinearity).
 
-logreg improved a touch (it's the model that took MolWt+TPSA), xgb/gcn flat within noise. not a breakthrough.
+not much improvement.
 
 
 ## repeated CV outcome (3x partitions)
-implemented as `tune --repeats N` (default 3): pool N 5-fold partitions per config instead of 1, so the winner is robust to fold assignment (3x cost). result: xgb + logreg configs unchanged (their single-split winners were already robust), gcn moved to a gentler config (h64/lr1e-3 vs h128/lr1e-2). old gcn config claimed test f1 0.816 at tune time but delivered 0.783 across seeds (0.033 mirage); new one claims 0.795, delivers 0.794. gap basically gone. tune numbers now mean something.
 
 final 10-seed comparison at the 45-feat, 3x-repeated-CV configs:
 
@@ -98,7 +97,7 @@ final 10-seed comparison at the 45-feat, 3x-repeated-CV configs:
 | logreg | 30 feats | 0.804 ± 0.026 | 0.741 ± 0.037 | 0.882 ± 0.036 | 0.923 ± 0.019 | 0.864 ± 0.039 |
 | gcn | 45 feats | 0.794 ± 0.029 | 0.742 ± 0.054 | 0.858 ± 0.031 | 0.925 ± 0.015 | 0.870 ± 0.030 |
 
-still tied within noise on every column. logreg best recall (0.882), gcn best precision/ROC-AUC/PR-AUC (better-calibrated ranking, more conservative), xgb trails.
+logreg best recall (0.882), gcn best precision/ROC-AUC/PR-AUC
 
 
 ## using dxtb for more dft feats
@@ -123,7 +122,7 @@ ran all 3 models over 10 seeds where every seed shares ONE stratified test split
 
 errors are only partly shared. of 469 misclassified (mol, seed) instances: 43% wrong by all 3, 23% by 2, but 34% wrong by just ONE model. pairwise error corr (phi): xgb-logreg 0.61, xgb-gcn 0.65, logreg-gcn 0.77. so logreg and gcn make more of the same mistakes.
 
-hard core: 97 molecules (9.2%) wrong by all 3 in >=50% of their appearances. label mix RB 34 / NRB 63 = 35% RB, same as the dataset - not one-class problem.
+97 molecules (9.2%) wrong by all 3 in >=50% of their appearances. label mix RB 34 / NRB 63 = 35% RB, same as the dataset, so not getting one class wrong more than the other.
 
 
 ## ensembling
@@ -137,12 +136,12 @@ soft-vote (average the probas). beats every single model on every metric, matche
 | xgb+logreg | 0.797 ± 0.028 | 0.759 | 0.841 | 0.928 | 0.887 |
 | all three | 0.799 ± 0.012 | 0.748 | 0.858 | 0.929 | 0.888 |
 
-gcn is droppable: xgb+logreg - all three = -0.001 ± 0.019 f1 (tied 5/10 seeds), and the 2-way has the best precision of anything tested (0.759). gcn adds ~nothing to the mean.
+xgb+logreg best ensemble
 BUT the only thing the 3 model ensemble does is less seed-to-seed variance (std 0.012 vs 0.028) - might generalise better.
 
 
 ## inference + external validation
-built two inference pipelines in src/inference: `ensemble` (xgb+logreg soft-vote) and `gcn`. fit-on-startup (no saved model files) - each fits once on the full training set at its config via a new `exp.fit_final` (the exact fit the reported metrics came from, factored out of evaluate_final), then scores new molecules by `Dataset.from_csv(...).subset(feats).transform(scaler)`. public api: `predict(csv, pipeline=...)` (row-aligned, abstains where xtb featurisation fails); `python -m inference.validate` runs the external set.
+built two inference pipelines in src/inference: `ensemble` (xgb+logreg soft-vote) and `gcn`. fit-on-startup (no saved model files) - each fits once on the full training set at its config via a new `exp.fit_final`, then scores new molecules by `Dataset.from_csv(...).subset(feats).transform(scaler)`. `python -m inference.validate` runs the external set.
 
 inference input is a csv in the smiles_data format (smiles + the 41 qsar cols + optional label), not a bare smiles. external-validation set (670 molecules, 191 RB / 28.5%).
 
@@ -153,7 +152,7 @@ external validation (670 molecules, 0 abstained - external set computed no error
 | ensemble (xgb+logreg) | 0.769 | 0.763 | 0.775 | 0.921 | 0.814 |
 | gcn | 0.785 | 0.796 | 0.775 | 0.926 | 0.825 |
 
-both generalise - external f1 ~0.77-0.79 and roc-auc ~0.92 basically match internal 10-seed cv, so no overfitting, models hold up on new molecs. lower pr-auc (~0.82) is just the lower RB prevalence out here (28.5% vs 34% in train).
+both generalise - external f1 ~0.77-0.79 and roc-auc ~0.92 basically match internal 10-seed cv, so no overfitting, models hold up on new molecs. lower pr-auc (~0.82) is just the lower RB prevalence in external (28.5% vs 34% in train).
 
 on the external set gcn slightly beats the ensemble on EVERY metric (f1 0.785 vs 0.769, precision 0.796 vs 0.763). small gap, but the looks like gcn generalises a bit better to new chemistry than internal cv suggested (probs learning something from the 3d structure graphs)
 
@@ -171,10 +170,32 @@ added a CAP_FEATURES const to exp/tune.py: when set (=20), --select pins n_featu
 
 basically no loss from dropping 53 -> 20 feats.
 
-logreg flipped to normalize scaling and both linear+graph went full l1 (l1_ratio 1.0). xgb & gcn share an identical 20-feat list (gcn ranks via xgb); ip / wbo_max / fukui±_max / homo_lumo_gap all survive.
+logreg flipped to normalize scaling and both linear+graph went full l1 (l1_ratio 1.0). xgb & gcn share an identical 20-feat list (gcn ranks via xgb); ip / wbo_max / fukui±_max / homo_lumo_gap all make it.
 
 
+## running gcn with and without tabular qsar features
+- this project was intended as a gcn learning experience, but still useful to test what adding graphs actually does. during training of the gcn, it will likely learn some relationships/properties itself, but using actual chemical properties will beat inferred ones.
+- run the full model (gcn + descritptive feats), graph only, and tabular descriptive feats only. (using weigths of trained model so may not be optimal, but should give indication for what im trying to see)
+
+| model | CV F1 | test F1 | ext F1 | CV ROC-AUC | ext PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| full  | 0.809 ± 0.044 | 0.818 | 0.790 | 0.922  | 0.796  |
+| graph_only | 0.685 ± 0.058 | 0.678   | 0.649  | 0.824 | 0.554 |
+| desc_only  | 0.803 ± 0.040 | 0.805   | 0.781  | 0.921 | 0.812 |
+
+test over more combos
+
+| model | CV F1 | test F1 | ext F1 | ext PR-AUC |
+| --- | --- | --- | --- | --- | --- |
+| full (graph + 53) | 0.809 ± 0.044 | 0.818   | 0.790  | 0.796 |
+| graph+qsar  | 0.808 ± 0.046 | 0.821   | 0.768  | 0.795 |
+| qsar_only   | 0.805 ± 0.056 | 0.821   | 0.778  | 0.816 |
+| desc_only (53) | 0.803 ± 0.040 | 0.805   | 0.781  | 0.812 |
+| graph+xtb+rdkit | 0.734 ± 0.041 | 0.692   | 0.749  | 0.769 |
+| xtb+rdkit_only | 0.731 ± 0.040 | 0.727   | 0.735  | 0.708 |
+| graph_only | 0.685 ± 0.058 | 0.678   | 0.649  | 0.554 |
 
 
+so in conclusion, gcn isn't the best choice for this project (probs harder for it to 'learn' the qsar feats instead of being given them). still interesting.
 
 
